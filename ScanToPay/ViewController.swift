@@ -8,16 +8,20 @@
 
 import UIKit
 import MVisaSDK
+//import MVisaMerchantSDK
 import Alamofire
 
-class MainViewController: UITableViewController {
+class ViewController: UITableViewController {
+
+    @IBOutlet weak var cardTypeLabel: UITextField!
+    @IBOutlet weak var lastFourLabel: UITextField!
 
     override func viewDidLoad() {
         super.viewDidLoad()
     }
 }
 
-extension MainViewController: MVisaPayMerchantDelegate {
+extension ViewController: MVisaPayMerchantDelegate {
 
     @IBAction func initiateMVisaSDKPayMerchantFlow() {
         print("Initiating MVisa Pay Merchant flow")
@@ -26,10 +30,15 @@ extension MainViewController: MVisaPayMerchantDelegate {
         MVisaSDK.setupOneTimeConfiguration(onetimeConfig)
 
         // Card details for forming MVisaPayMerchantRequest
-        let card1 = MVisaCardDetails(lastFourDigits: "5678", cardType: "FDNB Platinum", issuerLogo: nil, cardArtColor: nil, cardArtOverlay: nil, networkType: .visa)
-        let card2 = MVisaCardDetails(lastFourDigits: "1357", cardType: "FDNB Credit", issuerLogo: nil, cardArtColor: UIColor.brown, cardArtOverlay: nil, networkType: .visa)
+        if  cardTypeLabel.text?.isEmpty ?? true || lastFourLabel.text?.isEmpty ?? true {
+            notifyUser("Empty Data", message: "Enter sample card information")
+            return
+        }
 
-        let cardDetails = [card1, card2]
+        // Prepare consumer card list to be used to create Pay Friend Request
+        let card1 = MVisaCardDetails(lastFourDigits: lastFourLabel.text!, cardType: cardTypeLabel.text!, issuerLogo: nil, cardArtColor: nil, cardArtOverlay: nil, networkType: .visa)
+        let cardDetails = [card1, card1]
+
         let randomIndex = Int(arc4random_uniform(UInt32(cardDetails.count)))
 
         // Forming the MVisaPayMerchantRequest
@@ -56,7 +65,7 @@ extension MainViewController: MVisaPayMerchantDelegate {
         print(responseStr)
 
         let merchant = [
-            "acquiringBin": payMerchantResponse?.mVisaMerchantPan!,
+            "acquiringBin": "xxxxxx",
             "city": payMerchantResponse?.cityName!,
             "countryCode": payMerchantResponse?.countryCode!,
             "pan": payMerchantResponse?.mVisaMerchantPan!,
@@ -71,11 +80,27 @@ extension MainViewController: MVisaPayMerchantDelegate {
 
         let parameters = ["merchant": merchant, "transaction": transaction]
 
-        Alamofire.request(Constants.payMerchantEndpoint,  method: .post, parameters: parameters, encoding: JSONEncoding.default)
+        Alamofire.request(Constants.payMerchantEndpoint, method: .post, parameters: parameters, encoding: JSONEncoding.default)
             .responseJSON { response in
                 debugPrint(response)
             }
 
     }
+}
+
+extension UIViewController {
+    // Alert dialog to show to user
+    func notifyUser(_ title: String, message: String) {
+        let alert = UIAlertController(title: title,
+                                      message: message,
+                                      preferredStyle: UIAlertControllerStyle.alert)
+
+        let cancelAction = UIAlertAction(title: "OK",
+                                         style: .cancel, handler: nil)
+
+        alert.addAction(cancelAction)
+        self.present(alert, animated: true, completion: nil)
+    }
+
 }
 
